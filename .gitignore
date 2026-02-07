@@ -1,0 +1,7 @@
+node_modules/ 
+.env 
+package-lock.json 
+*.db 
+*.db-shm 
+*.db-wal 
+.DS_Store 

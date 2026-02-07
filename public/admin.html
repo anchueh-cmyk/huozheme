@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簽到紀錄管理後台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 登入畫面 */
+        #login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 40px);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .login-box p {
+            color: #666;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c00;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* 管理後台畫面 */
+        #admin-screen {
+            display: none;
+        }
+
+        .admin-header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .admin-header h1 {
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card .label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .records-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .records-header {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .records-header h2 {
+            color: #333;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .filter-group button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .filter-group button:hover {
+            background: #5a6fd6;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .mood-emoji {
+            font-size: 24px;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-great {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-okay {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-tired {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-urgent {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-sick {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-busy {
+            background: #d6d8d9;
+            color: #1b1e21;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .user-name {
+            font-weight: 500;
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .message-text {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .admin-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .records-header {
+                flex-direction: column;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+
+            .user-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 登入畫面 -->
+        <div id="login-screen">
+            <div class="login-box">
+                <h1>🔐 管理後台</h1>
+                <p>請輸入管理員帳號密碼</p>
+                
+                <div class="error-message" id="error-message"></div>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">帳號</label>
+                        <input type="text" id="username" placeholder="輸入帳號" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">密碼</label>
+                        <input type="password" id="password" placeholder="輸入密碼" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">登入後台</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 管理後台畫面 -->
+        <div id="admin-screen">
+            <div class="admin-header">
+                <h1>📋 全站簽到紀錄</h1>
+                <button class="logout-btn" onclick="logout()">🚪 登出</button>
+            </div>
+
+            <!-- 統計卡片 -->
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="number" id="total-records">0</div>
+                    <div class="label">總簽到次數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="total-users">0</div>
+                    <div class="label">簽到人數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="today-records">0</div>
+                    <div class="label">今日簽到</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="urgent-count">0</div>
+                    <div class="label">緊急求助</div>
+                </div>
+            </div>
+
+            <!-- 簽到記錄表格 -->
+            <div class="records-section">
+                <div class="records-header">
+                    <h2>📝 簽到明細</h2>
+                    <div class="filter-group">
+                        <select id="status-filter">
+                            <option value="">全部狀態</option>
+                            <option value="great">😊 良好</option>
+                            <option value="okay">🙂 普通</option>
+                            <option value="tired">😔 疲憊</option>
+                            <option value="urgent">🆘 急需支援</option>
+                            <option value="sick">🤒 身體不適</option>
+                            <option value="busy">😓 忙碌</option>
+                        </select>
+                        <input type="date" id="date-filter">
+                        <button onclick="applyFilters()">🔍 篩選</button>
+                        <button onclick="resetFilters()">🔄 重置</button>
+                        <button onclick="exportData()">📥 匯出</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>時間</th>
+                                <th>用戶</th>
+                                <th>狀態</th>
+                                <th>心情</th>
+                                <th>留言</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-body">
+                            <tr>
+                                <td colspan="5" class="loading">載入中</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentRecords = [];
+
+        // 頁面載入時檢查登入狀態
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLogin();
+        });
+
+        // 登入表單提交
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleLogin();
+        });
+
+        // 檢查是否已登入
+        async function checkLogin() {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                showLoginScreen();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/verify`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    showAdminScreen();
+                    loadRecords();
+                } else {
+                    showLoginScreen();
+                }
+            } catch (error) {
+                showLoginScreen();
+            }
+        }
+
+        // 處理登入
+        async function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error-message');
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('adminToken', data.token);
+                    showAdminScreen();
+                    loadRecords();
+                } else {
+                    errorEl.textContent = data.error || '帳號或密碼錯誤';
+                    errorEl.style.display = 'block';
+                }
+            } catch (error) {
+                errorEl.textContent = '連線錯誤，請稍後重試';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // 登出
+        function logout() {
+            localStorage.removeItem('adminToken');
+            showLoginScreen();
+        }
+
+        // 顯示登入畫面
+        function showLoginScreen() {
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('admin-screen').style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        // 顯示管理後台
+        function showAdminScreen() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('admin-screen').style.display = 'block';
+        }
+
+        // 載入簽到記錄
+        async function loadRecords() {
+            const tbody = document.getElementById('records-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="loading">載入中</td></tr>';
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/checkins`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('載入失敗');
+                }
+
+                const data = await response.json();
+                currentRecords = data.checkins;
+
+                updateStats(data.checkins);
+                renderRecords(data.checkins);
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="5" class="no-data">載入失敗，請重新整理頁面</td></tr>`;
+                console.error(error);
+            }
+        }
+
+        // 更新統計卡片
+        function updateStats(records) {
+            const today = new Date().toISOString().split('T')[0];
+
+            document.getElementById('total-records').textContent = records.length;
+
+            const uniqueUsers = new Set(records.map(r => r.user_id));
+            document.getElementById('total-users').textContent = uniqueUsers.size;
+
+            const todayRecords = records.filter(r => 
+                r.created_at.split('T')[0] === today
+            );
+            document.getElementById('today-records').textContent = todayRecords.length;
+
+            const urgentRecords = records.filter(r => r.status === 'urgent');
+            document.getElementById('urgent-count').textContent = urgentRecords.length;
+        }
+
+        // 渲染記錄表格
+        function renderRecords(records) {
+            const tbody = document.getElementById('records-body');
+
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-data">暫無簽到記錄</td></tr>';
+                return;
+            }
+
+            // 按時間倒序排列
+            const sortedRecords = [...records].sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+
+            tbody.innerHTML = sortedRecords.map(record => {
+                const date = new Date(record.created_at);
+                const dateStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+                const statusNames = {
+                    great: '😊 良好',
+                    okay: '🙂 普通',
+                    tired: '😔 疲憊',
+                    urgent: '🆘 急需支援',
+                    sick: '🤒 身體不適',
+                    busy: '😓 忙碌'
+                };
+
+                const userInitial = (record.nickname || record.email || '?')[0].toUpperCase();
+
+                return `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <div>
+                                    <div class="user-name">${record.nickname || '未知用戶'}</div>
+                                    <div class="user-email">${record.email || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="status-badge status-${record.status}">
+                                ${statusNames[record.status] || record.status}
+                            </span>
+                        </td>
+                        <td class="mood-emoji">${record.mood_emoji || '😐'}</td>
+                        <td class="message-text" title="${record.message || ''}">
+                            ${record.message || '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 篩選功能
+        function applyFilters() {
+            const status = document.getElementById('status-filter').value;
+            const date = document.getElementById('date-filter').value;
+
+            let filtered = currentRecords;
+
+            if (status) {
+                filtered = filtered.filter(r => r.status === status);
+            }
+
+            if (date) {
+                filtered = filtered.filter(r => 
+                    r.created_at.split('T')[0] === date
+                );
+            }
+
+            updateStats(filtered);
+            renderRecords(filtered);
+        }
+
+        // 重置篩選
+        function resetFilters() {
+            document.getElementById('status-filter').value = '';
+            document.getElementById('date-filter').value = '';
+            updateStats(currentRecords);
+            renderRecords(currentRecords);
+        }
+
+        // 匯出資料
+        function exportData() {
+            const csvContent = [
+                ['時間', '用戶名稱', 'Email', '狀態', '心情', '留言'].join(','),
+                ...currentRecords.map(r => {
+                    const date = new Date(r.created_at);
+                    return [
+                        `"${date.toLocaleString('zh-TW')}"`,
+                        `"${r.nickname || ''}"`,
+                        `"${r.email || ''}"`,
+                        `"${r.status}"`,
+                        `"${r.mood_emoji || ''}"`,
+                        `"${(r.message || '').replace(/"/g, '""')}"`
+                    ].join(',');
+                })
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `簽到記錄_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>

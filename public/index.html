@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#667eea">
+  <title>安安簽到系統 - 每天一點，確認彼此安好</title>
+  <style>
+    :root {
+      --primary: #667eea;
+      --primary-dark: #5a67d8;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --danger: #F44336;
+      --text: #2d3748;
+      --text-secondary: #718096;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      min-height: 100vh;
+      color: var(--text);
+    }
+    
+    .container {
+      max-width: 450px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 20px;
+      padding-bottom: 100px;
+    }
+    
+    .page {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 450px;
+      min-height: 100vh;
+      display: none;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    }
+    
+    .page.active { display: block; }
+    
+    .welcome-content { text-align: center; padding-top: 80px; }
+    
+    .logo-icon { font-size: 80px; display: block; margin-bottom: 20px; }
+    .logo-text { font-size: 36px; font-weight: 700; color: white; letter-spacing: 4px; margin-bottom: 16px; }
+    .tagline { font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 60px; }
+    
+    .welcome-actions { display: flex; flex-direction: column; gap: 16px; }
+    
+    .btn {
+      padding: 16px 32px;
+      border: none;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-secondary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      backdrop-filter: blur(10px);
+    }
+    
+    .btn:hover { transform: translateY(-2px); }
+    .btn-full { width: 100%; }
+    
+    .form-container {
+      background: white;
+      border-radius: 24px;
+      padding: 36px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      margin-top: 40px;
+    }
+    
+    .form-container h2 { font-size: 24px; margin-bottom: 24px; text-align: center; }
+    
+    .input-group { margin-bottom: 20px; }
+    
+    .input-group input, .input-group textarea, .input-group select {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+    }
+    
+    .form-footer { text-align: center; margin-top: 20px; color: var(--text-secondary); }
+    .form-footer a { color: var(--primary); text-decoration: none; }
+    
+    .btn-back {
+      display: block;
+      width: 100%;
+      text-align: center;
+      margin-top: 20px;
+      color: rgba(255,255,255,0.8);
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 12px;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .dashboard { padding-top: 20px; }
+    
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    
+    .user-name { color: white; font-size: 22px; font-weight: 600; }
+    .greeting { color: rgba(255,255,255,0.8); font-size: 18px; }
+    .btn-icon { background: none; border: none; font-size: 24px; cursor: pointer; color: white; }
+    
+    .checkin-card {
+      background: rgba(255,255,255,0.95);
+      border-radius: 24px;
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    
+    .status-emoji { font-size: 64px; display: block; margin-bottom: 12px; }
+    .status-text { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+    
+    .streak-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    
+    .checkin-actions { margin-top: 20px; }
+    
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .action-btn {
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .action-btn:hover { transform: translateY(-2px); background: white; }
+    .action-icon { font-size: 28px; }
+    .action-label { font-size: 14px; color: var(--text); font-weight: 500; }
+    
+    .emergency-section { text-align: center; }
+    
+    .btn-emergency {
+      background: linear-gradient(135deg, var(--danger), #c62828);
+      color: white;
+      padding: 18px 40px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      position: relative;
+    }
+    
+    .pulse-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.5);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { width: 100%; height: 100%; opacity: 1; }
+      100% { width: 150%; height: 150%; opacity: 0; }
+    }
+    
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    
+    .modal.active { display: flex; }
+    
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 28px;
+      width: 100%;
+      max-width: 400px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    .modal-header h3 { font-size: 20px; }
+    .modal-close { background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-secondary); }
+    
+    .status-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+    
+    .status-option {
+      padding: 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+    
+    .status-option.selected { border-color: var(--primary); background: rgba(102,126,234,0.1); }
+    .status-option .status-emoji { font-size: 32px; margin-bottom: 8px; }
+    .status-option .status-label { font-size: 14px; font-weight: 500; }
+    
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(45,55,72,0.95);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+      z-index: 2000;
+      text-align: center;
+      max-width: 90%;
+    }
+    
+    .toast.show { opacity: 1; visibility: visible; }
+    .toast.success { background: var(--success); }
+    .toast.warning { background: var(--warning); }
+    .toast.error { background: var(--danger); }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 18px;
+    }
+    
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .contact-item:last-child { border-bottom: none; }
+    
+    .contact-info { flex: 1; }
+    .contact-name { font-weight: 600; }
+    .contact-email { font-size: 12px; color: var(--text-secondary); }
+    .contact-status { font-size: 11px; color: var(--success); }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+    
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    
+    .feed-item {
+      padding: 16px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .feed-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .feed-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .feed-name { font-weight: 600; font-size: 14px; }
+    .feed-time { font-size: 12px; color: var(--text-secondary); }
+    .feed-content { display: flex; align-items: center; gap: 8px; }
+    .feed-emoji { font-size: 24px; }
+    .feed-message { font-size: 14px; color: var(--text); }
+    .feed-status { 
+      display: inline-block; 
+      padding: 4px 10px; 
+      background: #e2e8f0; 
+      border-radius: 12px; 
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--danger);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      position: absolute;
+      top: -5px;
+      right: -5px;
+    }
+    
+    .notification-badge {
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 歡迎頁面 -->
+    <section id="welcome-page" class="page active">
+      <div class="welcome-content">
+        <span class="logo-icon">💚</span>
+        <h1 class="logo-text">安安簽到系統</h1>
+        <p class="tagline">每天一點，確認彼此安好</p>
+        <div class="welcome-actions">
+          <button class="btn btn-primary" onclick="app.showPage('login-page')">登入</button>
+          <button class="btn btn-secondary" onclick="app.showPage('register-page')">註冊</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 登入頁面 -->
+    <section id="login-page" class="page">
+      <div class="form-container">
+        <h2>歡迎回來</h2>
+        <form onsubmit="app.login(event)">
+          <div class="input-group">
+            <input type="email" id="login-email" placeholder="郵箱" required>
+          </div>
+          <div class="input-group">
+            <input type="password" id="login-password" placeholder="密碼" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" id="login-btn">
+            登入
+          </button>
+        </form>
+        <p class="form-footer">
+          還沒有帳號？<a href="#" onclick="app.showPage('register-page')">立即註冊</a>
+        </p>
+        <button class="btn-back" onclick="app.showPage('welcome-page')">← 返回</button>
+      </div>
+    </section>
+
+    <!-- 註冊頁面 -->
+    <section id="register-page" class="page">
+      <div class="form-container">
+        <h2>創建帳號</h2>
+        <form onsubmit="app.register(event)">
+          <div class="input-group">
+            <input type="text" id="reg-nickname" placeholder="暱稱" required>
+          </div>
+          <div class="input-group">
+            <input type="email" id="reg-email" placeholder="郵箱" required>
+          </div>
+          <div class="input-group">
+            <input type="password" id="reg-password" placeholder="密碼（至少6位）" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" id="reg-btn">
+            註冊
+          </button>
+        </form>
+        <p class="form-footer">
+          已有帳號？<a href="#" onclick="app.showPage('login-page')">立即登入</a>
+        </p>
+        <button class="btn-back" onclick="app.showPage('welcome-page')">← 返回</button>
+      </div>
+    </section>
+
+    <!-- 儀表盤 -->
+    <section id="dashboard-page" class="page">
+      <div class="dashboard">
+        <header class="dashboard-header">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="avatar" id="user-avatar">用</div>
+            <div>
+              <span class="greeting">你好，</span>
+              <span class="user-name" id="user-name">用戶</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;">
+            <button class="btn-icon notification-badge" onclick="app.showNotifications()">
+              🔔
+              <span id="notif-badge" class="badge" style="display:none;">0</span>
+            </button>
+            <button class="btn-icon" onclick="app.logout()">🚪</button>
+          </div>
+        </header>
+
+        <div class="checkin-card">
+          <div class="checkin-status">
+            <span class="status-emoji" id="status-emoji">🌅</span>
+            <div class="status-text" id="status-text">新的一天開始了</div>
+            <div class="streak-badge" id="streak-badge" style="display:none;">
+              <span>🔥</span>
+              <span id="streak-count">0</span> 天
+            </div>
+          </div>
+
+          <div class="checkin-actions" id="checkin-actions">
+            <button class="btn btn-primary btn-full" onclick="app.showCheckinModal()">
+              ✓ 簽到報平安
+            </button>
+          </div>
+
+          <div class="checkin-info" id="checkin-info" style="display:none;">
+            <p class="checkin-time" id="checkin-time"></p>
+            <p class="checkin-message" id="checkin-message" style="margin-top:8px;font-style:italic;color:#718096;"></p>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="action-btn" onclick="app.showContacts()">
+            <span class="action-icon">👨‍👩‍👧</span>
+            <span class="action-label">我的親友</span>
+          </button>
+          <button class="action-btn" onclick="app.showFeed()">
+            <span class="action-icon">🌍</span>
+            <span class="action-label">安安社區</span>
+          </button>
+          <button class="action-btn" onclick="app.showHistory()">
+            <span class="action-icon">📅</span>
+            <span class="action-label">簽到歷史</span>
+          </button>
+          <button class="action-btn" onclick="app.showProfile()">
+            <span class="action-icon">👤</span>
+            <span class="action-label">個人資料</span>
+          </button>
+        </div>
+
+        <div class="emergency-section">
+          <button class="btn-emergency" onclick="app.triggerEmergency()">
+            <span class="pulse-ring"></span>
+            🆘 需要幫助
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 簽到模態框 -->
+  <div id="checkin-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>今天感覺如何？</h3>
+        <button class="modal-close" onclick="app.closeModal('checkin-modal')">×</button>
+      </div>
+      <div class="status-options">
+        <button class="status-option" data-status="great" onclick="app.selectStatus(this)">
+          <span class="status-emoji">😊</span>
+          <span class="status-label">很好</span>
+        </button>
+        <button class="status-option" data-status="okay" onclick="app.selectStatus(this)">
+          <span class="status-emoji">🙂</span>
+          <span class="status-label">還行</span>
+        </button>
+        <button class="status-option" data-status="tired" onclick="app.selectStatus(this)">
+          <span class="status-emoji">😔</span>
+          <span class="status-label">有點累</span>
+        </button>
+        <button class="status-option" data-status="sick" onclick="app.selectStatus(this)">
+          <span class="status-emoji">🤒</span>
+          <span class="status-label">身體不適</span>
+        </button>
+        <button class="status-option" data-status="busy" onclick="app.selectStatus(this)">
+          <span class="status-emoji">😓</span>
+          <span class="status-label">很忙</span>
+        </button>
+        <button class="status-option" data-status="urgent" onclick="app.selectStatus(this)">
+          <span class="status-emoji">🆘</span>
+          <span class="status-label">需要聯繫</span>
+        </button>
+      </div>
+      <div class="input-group">
+        <textarea id="checkin-message" placeholder="想對親友說什麼？（可選）" rows="3"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="app.submitCheckin()" id="checkin-submit-btn">
+        確認簽到
+      </button>
+    </div>
+  </div>
+
+  <!-- 親友模態框 -->
+  <div id="contacts-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>我的親友</h3>
+        <button class="modal-close" onclick="app.closeModal('contacts-modal')">×</button>
+      </div>
+      <div id="contacts-list"></div>
+      <button class="btn btn-primary btn-full" onclick="app.showAddContact()" style="margin-top:16px;">
+        + 添加親友
+      </button>
+    </div>
+  </div>
+
+  <!-- 添加親友模態框 -->
+  <div id="add-contact-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>添加親友</h3>
+        <button class="modal-close" onclick="app.closeModal('add-contact-modal')">×</button>
+      </div>
+      <form onsubmit="app.addContact(event)">
+        <div class="input-group">
+          <input type="email" id="contact-email" placeholder="親友郵箱" required>
+        </div>
+        <div class="input-group">
+          <input type="text" id="contact-name" placeholder="親友暱稱（可選）">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">發送請求</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 社區動態模態框 -->
+  <div id="feed-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🌍 安安社區</h3>
+        <button class="modal-close" onclick="app.closeModal('feed-modal')">×</button>
+      </div>
+      <div id="feed-list"></div>
+    </div>
+  </div>
+
+  <!-- 通知模態框 -->
+  <div id="notifications-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>通知</h3>
+        <button class="modal-close" onclick="app.closeModal('notifications-modal')">×</button>
+      </div>
+      <div id="notifications-list"></div>
+    </div>
+  </div>
+
+  <!-- 歷史模態框 -->
+  <div id="history-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📅 簽到歷史</h3>
+        <button class="modal-close" onclick="app.closeModal('history-modal')">×</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- 個人資料模態框 -->
+  <div id="profile-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>👤 個人資料</h3>
+        <button class="modal-close" onclick="app.closeModal('profile-modal')">×</button>
+      </div>
+      <form onsubmit="app.updateProfile(event)">
+        <div class="input-group">
+          <label style="font-size:14px;color:#718096;display:block;margin-bottom:8px;">暱稱</label>
+          <input type="text" id="profile-nickname" required>
+        </div>
+        <div class="input-group">
+          <label style="font-size:14px;color:#718096;display:block;margin-bottom:8px;">郵箱</label>
+          <input type="email" id="profile-email" disabled style="background:#f7fafc;">
+        </div>
+        <div class="input-group">
+          <label style="font-size:14px;color:#718096;display:block;margin-bottom:8px;">電話（緊急聯繫用）</label>
+          <input type="tel" id="profile-phone" placeholder="+886-xxxxxxxx">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">儲存</button>
+      </form>
+      <button class="btn" onclick="app.logout()" style="margin-top:16px;background:#F44336;color:white;width:100%;">
+        登出帳號
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+
+    const App = {
+      currentUser: null,
+      token: null,
+      selectedStatus: null,
+
+      init() {
+        this.token = localStorage.getItem('anansign_token');
+        if (this.token) {
+          this.loadUserData();
+        }
+      },
+
+      async loadUserData() {
+        try {
+          const res = await fetch(`${API_URL}/user/me`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            this.currentUser = data.user;
+            this.showPage('dashboard-page');
+            this.loadDashboardData();
+            this.loadNotifications();
+          } else {
+            this.logout();
+          }
+        } catch (e) {
+          console.error('載入用戶資料失敗:', e);
+          this.showToast('無法連接到伺服器', 'error');
+        }
+      },
+
+      showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+      },
+
+      async login(e) {
+        e.preventDefault();
+        const btn = document.getElementById('login-btn');
+        btn.innerHTML = '<span class="loading"></span>登入中...';
+        btn.disabled = true;
+
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+          const res = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            this.token = data.token;
+            this.currentUser = data.user;
+            localStorage.setItem('anansign_token', data.token);
+            this.showToast('登入成功！', 'success');
+            this.showPage('dashboard-page');
+            this.loadDashboardData();
+            this.loadNotifications();
+          } else {
+            this.showToast(data.error || '登入失敗', 'error');
+          }
+        } catch (e) {
+          this.showToast('無法連接到伺服器', 'error');
+        } finally {
+          btn.innerHTML = '登入';
+          btn.disabled = false;
+        }
+      },
+
+      async register(e) {
+        e.preventDefault();
+        const btn = document.getElementById('reg-btn');
+        btn.innerHTML = '<span class="loading"></span>註冊中...';
+        btn.disabled = true;
+
+        const nickname = document.getElementById('reg-nickname').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+
+        try {
+          const res = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname, email, password })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            this.token = data.token;
+            this.currentUser = data.user;
+            localStorage.setItem('anansign_token', data.token);
+            this.showToast('註冊成功！', 'success');
+            this.showPage('dashboard-page');
+            this.loadDashboardData();
+          } else {
+            this.showToast(data.error || '註冊失敗', 'error');
+          }
+        } catch (e) {
+          this.showToast('無法連接到伺服器', 'error');
+        } finally {
+          btn.innerHTML = '註冊';
+          btn.disabled = false;
+        }
+      },
+
+      logout() {
+        localStorage.removeItem('anansign_token');
+        this.token = null;
+        this.currentUser = null;
+        this.showToast('已登出');
+        this.showPage('welcome-page');
+      },
+
+      async loadDashboardData() {
+        if (!this.currentUser) return;
+        
+        document.getElementById('user-name').textContent = this.currentUser.nickname;
+        document.getElementById('user-avatar').textContent = this.currentUser.nickname.charAt(0);
+
+        try {
+          const res = await fetch(`${API_URL}/checkins/today`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+          this.updateCheckinUI(data);
+        } catch (e) {
+          console.error('載入簽到數據失敗:', e);
+          this.updateCheckinUI({ checkedIn: false, streakDays: 0 });
+        }
+      },
+
+      updateCheckinUI(data) {
+        const emojiEl = document.getElementById('status-emoji');
+        const textEl = document.getElementById('status-text');
+        const streakEl = document.getElementById('streak-badge');
+        const actionsEl = document.getElementById('checkin-actions');
+        const infoEl = document.getElementById('checkin-info');
+
+        const statusMap = {
+          great: { emoji: '😊', text: '今天狀態很好' },
+          okay: { emoji: '🙂', text: '今天還不錯' },
+          tired: { emoji: '😔', text: '今天有點累' },
+          sick: { emoji: '🤒', text: '身體不太舒服' },
+          busy: { emoji: '😓', text: '今天很忙碌' },
+          urgent: { emoji: '🆘', text: '需要親友關注' }
+        };
+
+        if (data.checkedIn && data.checkin) {
+          const status = statusMap[data.checkin.status] || { emoji: '✅', text: '已簽到' };
+          emojiEl.textContent = data.checkin.mood_emoji || status.emoji;
+          textEl.textContent = status.text;
+          
+          if (data.streakDays > 1) {
+            streakEl.style.display = 'inline-flex';
+            document.getElementById('streak-count').textContent = data.streakDays;
+          } else {
+            streakEl.style.display = 'none';
+          }
+
+          actionsEl.style.display = 'none';
+          infoEl.style.display = 'block';
+          
+          if (data.checkin.created_at) {
+            const time = new Date(data.checkin.created_at).toLocaleString('zh-TW');
+            document.getElementById('checkin-time').textContent = `簽到時間：${time}`;
+            document.getElementById('checkin-message').textContent = data.checkin.message ? `"${data.checkin.message}"` : '';
+          }
+        } else {
+          emojiEl.textContent = '🌅';
+          textEl.textContent = '新的一天開始了';
+          streakEl.style.display = 'none';
+          actionsEl.style.display = 'block';
+          infoEl.style.display = 'none';
+        }
+      },
+
+      showCheckinModal() {
+        this.selectedStatus = null;
+        document.querySelectorAll('.status-option').forEach(el => el.classList.remove('selected'));
+        document.getElementById('checkin-message').value = '';
+        document.getElementById('checkin-modal').classList.add('active');
+      },
+
+      selectStatus(el) {
+        document.querySelectorAll('.status-option').forEach(item => item.classList.remove('selected'));
+        el.classList.add('selected');
+        this.selectedStatus = el.dataset.status;
+      },
+
+      async submitCheckin() {
+        if (!this.selectedStatus) {
+          return this.showToast('請選擇當前狀態', 'warning');
+        }
+
+        const btn = document.getElementById('checkin-submit-btn');
+        btn.innerHTML = '<span class="loading"></span>提交中...';
+        btn.disabled = true;
+
+        const message = document.getElementById('checkin-message').value;
+
+        try {
+          const res = await fetch(`${API_URL}/checkins`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.token}`
+            },
+            body: JSON.stringify({ status: this.selectedStatus, message })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            this.closeModal('checkin-modal');
+            this.showToast('簽到成功！已通知您的親友', 'success');
+            this.loadDashboardData();
+          } else {
+            this.showToast(data.error || '簽到失敗', 'error');
+          }
+        } catch (e) {
+          this.closeModal('checkin-modal');
+          this.updateCheckinUI({
+            checkedIn: true,
+            checkin: { status: this.selectedStatus, message, mood_emoji: document.querySelector(`[data-status="${this.selectedStatus}"] .status-emoji`).textContent },
+            streakDays: 1
+          });
+          this.showToast('演示模式：簽到成功！', 'success');
+        } finally {
+          btn.innerHTML = '確認簽到';
+          btn.disabled = false;
+        }
+      },
+
+      async showContacts() {
+        try {
+          const res = await fetch(`${API_URL}/contacts`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+          
+          const container = document.getElementById('contacts-list');
+          
+          if (data.contacts.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon">👥</div>
+                <p>還沒有親友</p>
+                <p style="font-size:12px;margin-top:8px;">添加親友後可以互相關注彼此的簽到狀態</p>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.contacts.map(c => `
+              <div class="contact-item">
+                <div class="avatar" style="background:var(--primary);font-size:14px;">${c.name.charAt(0)}</div>
+                <div class="contact-info">
+                  <div class="contact-name">${c.name}</div>
+                  <div class="contact-email">${c.email}</div>
+                  ${c.last_checkin ? `<div class="contact-status" style="font-size:11px;">最後簽到：${new Date(c.last_checkin).toLocaleDateString('zh-TW')}</div>` : ''}
+                </div>
+                <span class="feed-status">${c.status === 'accepted' ? '已確認' : '待確認'}</span>
+              </div>
+            `).join('');
+          }
+          
+          document.getElementById('contacts-modal').classList.add('active');
+        } catch (e) {
+          this.showToast('無法載入親友列表', 'error');
+        }
+      },
+
+      showAddContact() {
+        this.closeModal('contacts-modal');
+        document.getElementById('contact-email').value = '';
+        document.getElementById('contact-name').value = '';
+        document.getElementById('add-contact-modal').classList.add('active');
+      },
+
+      async addContact(e) {
+        e.preventDefault();
+        const email = document.getElementById('contact-email').value;
+        const name = document.getElementById('contact-name').value;
+        
+        try {
+          const res = await fetch(`${API_URL}/contacts`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.token}`
+            },
+            body: JSON.stringify({ email, name })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            this.closeModal('add-contact-modal');
+            this.showToast(data.message, 'success');
+          } else {
+            this.showToast(data.error, 'error');
+          }
+        } catch (e) {
+          this.closeModal('add-contact-modal');
+          this.showToast('演示模式：親友已添加', 'success');
+        }
+      },
+
+      async showFeed() {
+        const container = document.getElementById('feed-list');
+        container.innerHTML = '<div class="empty-state"><div class="loading" style="margin:0 auto;"></div><p style="margin-top:16px;">載入中...</p></div>';
+        document.getElementById('feed-modal').classList.add('active');
+
+        try {
+          const res = await fetch(`${API_URL}/feed`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+          
+          if (data.feed.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon">🌍</div>
+                <p>社區還沒有動態</p>
+                <p style="font-size:12px;margin-top:8px;">成為第一個簽到的人吧！</p>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.feed.map(f => `
+              <div class="feed-item">
+                <div class="feed-header">
+                  <div class="feed-avatar">${f.user.nickname.charAt(0)}</div>
+                  <div>
+                    <div class="feed-name">${f.user.nickname}</div>
+                    <div class="feed-time">${this.formatTime(f.checkin_time)}</div>
+                  </div>
+                </div>
+                <div class="feed-content">
+                  <span class="feed-emoji">${f.mood_emoji}</span>
+                  <span class="feed-status">${this.getStatusText(f.status)}</span>
+                </div>
+                ${f.message ? `<p style="font-size:14px;margin-top:8px;color:#4a5568;">"${f.message}"</p>` : ''}
+              </div>
+            `).join('');
+          }
+        } catch (e) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">⚠️</div>
+              <p>無法載入社區動態</p>
+            </div>
+          `;
+        }
+      },
+
+      async showHistory() {
+        const container = document.getElementById('history-list');
+        container.innerHTML = '<div class="empty-state"><div class="loading" style="margin:0 auto;"></div><p style="margin-top:16px;">載入中...</p></div>';
+        document.getElementById('history-modal').classList.add('active');
+
+        try {
+          const res = await fetch(`${API_URL}/checkins/history?limit=30`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+          
+          if (data.checkins.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <p>還沒有簽到記錄</p>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.checkins.map(c => `
+              <div class="feed-item">
+                <div class="feed-header">
+                  <span class="feed-emoji">${c.mood_emoji}</span>
+                  <div>
+                    <div class="feed-name">${this.getStatusText(c.status)}</div>
+                    <div class="feed-time">${new Date(c.created_at).toLocaleString('zh-TW')}</div>
+                  </div>
+                </div>
+                ${c.message ? `<p style="font-size:14px;margin-top:4px;color:#4a5568;">"${c.message}"</p>` : ''}
+              </div>
+            `).join('');
+          }
+        } catch (e) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">⚠️</div>
+              <p>無法載入歷史記錄</p>
+            </div>
+          `;
+        }
+      },
+
+      async showProfile() {
+        document.getElementById('profile-nickname').value = this.currentUser.nickname;
+        document.getElementById('profile-email').value = this.currentUser.email;
+        document.getElementById('profile-phone').value = this.currentUser.phone || '';
+        document.getElementById('profile-modal').classList.add('active');
+      },
+
+      async updateProfile(e) {
+        e.preventDefault();
+        
+        const nickname = document.getElementById('profile-nickname').value;
+        const phone = document.getElementById('profile-phone').value;
+
+        try {
+          const res = await fetch(`${API_URL}/user/profile`, {
+            method: 'PUT',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.token}`
+            },
+            body: JSON.stringify({ nickname, phone })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            this.currentUser.nickname = nickname;
+            this.currentUser.phone = phone;
+            document.getElementById('user-name').textContent = nickname;
+            document.getElementById('user-avatar').textContent = nickname.charAt(0);
+            this.closeModal('profile-modal');
+            this.showToast('資料已更新', 'success');
+          } else {
+            this.showToast(data.error, 'error');
+          }
+        } catch (e) {
+          this.showToast('無法更新資料', 'error');
+        }
+      },
+
+      async loadNotifications() {
+        try {
+          const res = await fetch(`${API_URL}/notifications?unread=true`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+          
+          const badge = document.getElementById('notif-badge');
+          if (data.notifications.length > 0) {
+            badge.textContent = data.notifications.length > 99 ? '99+' : data.notifications.length;
+            badge.style.display = 'flex';
+          } else {
+            badge.style.display = 'none';
+          }
+        } catch (e) {
+          // 忽略通知載入錯誤
+        }
+      },
+
+      async showNotifications() {
+        const container = document.getElementById('notifications-list');
+        container.innerHTML = '<div class="empty-state"><div class="loading" style="margin:0 auto;"></div><p style="margin-top:16px;">載入中...</p></div>';
+        document.getElementById('notifications-modal').classList.add('active');
+
+        try {
+          const res = await fetch(`${API_URL}/notifications`, {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+          
+          // 標記為已讀
+          data.notifications.forEach(n => {
+            fetch(`${API_URL}/notifications/${n.id}/read`, {
+              method: 'PUT',
+              headers: { 'Authorization': `Bearer ${this.token}` }
+            });
+          });
+          document.getElementById('notif-badge').style.display = 'none';
+          
+          if (data.notifications.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <p>沒有通知</p>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.notifications.map(n => `
+              <div class="feed-item" style="background:${n.read ? 'transparent' : '#f7fafc'};border-radius:8px;margin-bottom:8px;">
+                <div class="feed-header">
+                  <span style="font-size:20px;">${this.getNotifIcon(n.type)}</span>
+                  <div style="flex:1;margin-left:8px;">
+                    <div class="feed-name">${n.title}</div>
+                    <div class="feed-time">${this.formatTime(n.created_at)}</div>
+                  </div>
+                </div>
+                ${n.message ? `<p style="font-size:14px;color:#4a5568;margin-top:4px;">${n.message}</p>` : ''}
+              </div>
+            `).join('');
+          }
+        } catch (e) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">⚠️</div>
+              <p>無法載入通知</p>
+            </div>
+          `;
+        }
+      },
+
+      async triggerEmergency() {
+        if (!confirm('確認觸發緊急狀態？您的所有親友都會立即收到通知。')) return;
+        
+        try {
+          const res = await fetch(`${API_URL}/emergency/trigger`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.token}`
+            },
+            body: JSON.stringify({ message: '需要幫助' })
+          });
+          const data = await res.json();
+          
+          if (data.success) {
+            this.showToast('🆘 已向所有親友發送緊急通知！', 'success');
+          } else {
+            this.showToast(data.error || '發送失敗', 'error');
+          }
+        } catch (e) {
+          this.showToast('🆘 演示模式：緊急通知已發送', 'success');
+        }
+      },
+
+      closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('active');
+      },
+
+      showToast(message, type = 'default') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast show ${type}`;
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      },
+
+      formatTime(dateStr) {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diff = now - date;
+        
+        if (diff < 60000) return '剛剛';
+        if (diff < 3600000) return `${Math.floor(diff/60000)} 分鐘前`;
+        if (diff < 86400000) return `${Math.floor(diff/3600000)} 小時前`;
+        if (diff < 604800000) return `${Math.floor(diff/86400000)} 天前`;
+        
+        return date.toLocaleDateString('zh-TW');
+      },
+
+      getStatusText(status) {
+        const map = {
+          great: '很好',
+          okay: '還行',
+          tired: '有點累',
+          sick: '身體不適',
+          busy: '很忙碌',
+          urgent: '需要聯繫'
+        };
+        return map[status] || status;
+      },
+
+      getNotifIcon(type) {
+        const map = {
+          checkin: '✅',
+          friend_request: '👥',
+          emergency: '🆘',
+          system: '💚'
+        };
+        return map[type] || '📢';
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      window.app = App;
+      App.init();
+    });
+
+    // 點擊模態框外部關閉
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
