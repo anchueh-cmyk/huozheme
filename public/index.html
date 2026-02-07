@@ -401,6 +401,16 @@
     .notification-badge {
       position: relative;
     }
+    
+    .demo-badge {
+      background: linear-gradient(135deg, var(--warning), #ff9800);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-top: 8px;
+      display: inline-block;
+    }
   </style>
 </head>
 <body>
@@ -415,6 +425,7 @@
           <button class="btn btn-primary" onclick="app.showPage('login-page')">登入</button>
           <button class="btn btn-secondary" onclick="app.showPage('register-page')">註冊</button>
         </div>
+        <div class="demo-badge">🎮 演示模式 - 資料存在瀏覽器</div>
       </div>
     </section>
 
@@ -676,37 +687,57 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    const API_URL = 'http://localhost:3000/api';
+    // 💾 localStorage 數據管理工具
+    const Storage = {
+      get(key, defaultValue = null) {
+        try {
+          const item = localStorage.getItem(key);
+          return item ? JSON.parse(item) : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      },
+      
+      set(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      },
+      
+      remove(key) {
+        localStorage.removeItem(key);
+      }
+    };
 
     const App = {
       currentUser: null,
-      token: null,
       selectedStatus: null,
 
       init() {
-        this.token = localStorage.getItem('anansign_token');
-        if (this.token) {
-          this.loadUserData();
+        // 嘗試恢復登入狀態
+        const savedUser = Storage.get('anansign_currentUser', null);
+        if (savedUser) {
+          this.currentUser = savedUser;
+          this.showPage('dashboard-page');
+          this.loadDashboardData();
+          this.loadNotifications();
         }
+        
+        // 初始化演示數據（如果空的話）
+        this.initDemoData();
       },
 
-      async loadUserData() {
-        try {
-          const res = await fetch(`${API_URL}/user/me`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            this.currentUser = data.user;
-            this.showPage('dashboard-page');
-            this.loadDashboardData();
-            this.loadNotifications();
-          } else {
-            this.logout();
-          }
-        } catch (e) {
-          console.error('載入用戶資料失敗:', e);
-          this.showToast('無法連接到伺服器', 'error');
+      initDemoData() {
+        // 初始化演示用戶數據
+        if (!Storage.get('anansign_users')) {
+          Storage.set('anansign_users', {});
+        }
+        if (!Storage.get('anansign_allCheckins')) {
+          // 添加一些演示數據
+          const demoCheckins = [
+            { userId: 'demo1', nickname: '小明', status: 'great', message: '新的一天，元氣滿滿！', created_at: new Date().toISOString(), mood_emoji: '😊' },
+            { userId: 'demo2', nickname: '小華', status: 'okay', message: '還不錯，今天天氣很好', created_at: new Date(Date.now() - 3600000).toISOString(), mood_emoji: '🙂' },
+            { userId: 'demo3', nickname: '媽媽', status: 'great', message: '孩子們都還好我就放心了', created_at: new Date(Date.now() - 7200000).toISOString(), mood_emoji: '😊' }
+          ];
+          Storage.set('anansign_allCheckins', demoCheckins);
         }
       },
 
@@ -724,31 +755,45 @@
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
 
-        try {
-          const res = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-          });
-          const data = await res.json();
-          
-          if (data.success) {
-            this.token = data.token;
-            this.currentUser = data.user;
-            localStorage.setItem('anansign_token', data.token);
-            this.showToast('登入成功！', 'success');
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 800));
+
+        const users = Storage.get('anansign_users', {});
+        const user = users[email];
+
+        if (user && user.password === password) {
+          this.currentUser = {
+            id: email,
+            email: email,
+            nickname: user.nickname,
+            phone: user.phone || ''
+          };
+          Storage.set('anansign_currentUser', this.currentUser);
+          this.showToast('登入成功！', 'success');
+          this.showPage('dashboard-page');
+          this.loadDashboardData();
+          this.loadNotifications();
+        } else {
+          // 檢查是否為演示帳號
+          if (email === 'demo@test.com' && password === '123456') {
+            this.currentUser = {
+              id: 'demo@test.com',
+              email: 'demo@test.com',
+              nickname: '演示用戶',
+              phone: ''
+            };
+            Storage.set('anansign_currentUser', this.currentUser);
+            this.showToast('🎮 演示帳號登入成功！', 'success');
             this.showPage('dashboard-page');
             this.loadDashboardData();
             this.loadNotifications();
           } else {
-            this.showToast(data.error || '登入失敗', 'error');
+            this.showToast('郵箱或密碼錯誤', 'error');
           }
-        } catch (e) {
-          this.showToast('無法連接到伺服器', 'error');
-        } finally {
-          btn.innerHTML = '登入';
-          btn.disabled = false;
         }
+
+        btn.innerHTML = '登入';
+        btn.disabled = false;
       },
 
       async register(e) {
@@ -761,56 +806,100 @@
         const email = document.getElementById('reg-email').value;
         const password = document.getElementById('reg-password').value;
 
-        try {
-          const res = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname, email, password })
-          });
-          const data = await res.json();
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 800));
+
+        const users = Storage.get('anansign_users', {});
+
+        if (users[email]) {
+          this.showToast('此郵箱已被註冊', 'error');
+        } else {
+          users[email] = {
+            nickname,
+            email,
+            password,
+            phone: '',
+            contacts: [],
+            checkins: [],
+            created_at: new Date().toISOString()
+          };
+          Storage.set('anansign_users', users);
           
-          if (data.success) {
-            this.token = data.token;
-            this.currentUser = data.user;
-            localStorage.setItem('anansign_token', data.token);
-            this.showToast('註冊成功！', 'success');
-            this.showPage('dashboard-page');
-            this.loadDashboardData();
-          } else {
-            this.showToast(data.error || '註冊失敗', 'error');
-          }
-        } catch (e) {
-          this.showToast('無法連接到伺服器', 'error');
-        } finally {
-          btn.innerHTML = '註冊';
-          btn.disabled = false;
+          this.currentUser = {
+            id: email,
+            email: email,
+            nickname: nickname,
+            phone: ''
+          };
+          Storage.set('anansign_currentUser', this.currentUser);
+          
+          this.showToast('註冊成功！', 'success');
+          this.showPage('dashboard-page');
+          this.loadDashboardData();
         }
+
+        btn.innerHTML = '註冊';
+        btn.disabled = false;
       },
 
       logout() {
-        localStorage.removeItem('anansign_token');
-        this.token = null;
+        Storage.remove('anansign_currentUser');
         this.currentUser = null;
         this.showToast('已登出');
         this.showPage('welcome-page');
       },
 
-      async loadDashboardData() {
+      loadDashboardData() {
         if (!this.currentUser) return;
         
         document.getElementById('user-name').textContent = this.currentUser.nickname;
         document.getElementById('user-avatar').textContent = this.currentUser.nickname.charAt(0);
 
-        try {
-          const res = await fetch(`${API_URL}/checkins/today`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          const data = await res.json();
-          this.updateCheckinUI(data);
-        } catch (e) {
-          console.error('載入簽到數據失敗:', e);
-          this.updateCheckinUI({ checkedIn: false, streakDays: 0 });
+        // 檢查今日是否已簽到
+        const users = Storage.get('anansign_users', {});
+        const userData = users[this.currentUser.email] || { checkins: [] };
+        
+        const today = new Date().toDateString();
+        const todayCheckin = userData.checkins.find(c => 
+          new Date(c.created_at).toDateString() === today
+        );
+
+        // 計算連續簽到天數
+        const streakDays = this.calculateStreak(userData.checkins);
+
+        this.updateCheckinUI({
+          checkedIn: !!todayCheckin,
+          checkin: todayCheckin || null,
+          streakDays: streakDays
+        });
+      },
+
+      calculateStreak(checkins) {
+        if (!checkins || checkins.length === 0) return 0;
+        
+        // 按日期排序
+        const sorted = [...checkins].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        let streak = 0;
+        const today = new Date().toDateString();
+        let checkDate = new Date();
+        
+        // 檢查今天
+        if (sorted.some(c => new Date(c.created_at).toDateString() === today)) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          // 如果今天還沒簽到，昨天的也算
+          checkDate.setDate(checkDate.getDate() - 1);
         }
+
+        // 檢查連續天數
+        while (sorted.some(c => new Date(c.created_at).toDateString() === checkDate.toDateString())) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        return streak;
       },
 
       updateCheckinUI(data) {
@@ -880,75 +969,80 @@
         btn.innerHTML = '<span class="loading"></span>提交中...';
         btn.disabled = true;
 
-        const message = document.getElementById('checkin-message').value;
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 500));
 
-        try {
-          const res = await fetch(`${API_URL}/checkins`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.token}`
-            },
-            body: JSON.stringify({ status: this.selectedStatus, message })
-          });
-          const data = await res.json();
-          
-          if (data.success) {
-            this.closeModal('checkin-modal');
-            this.showToast('簽到成功！已通知您的親友', 'success');
-            this.loadDashboardData();
-          } else {
-            this.showToast(data.error || '簽到失敗', 'error');
-          }
-        } catch (e) {
-          this.closeModal('checkin-modal');
-          this.updateCheckinUI({
-            checkedIn: true,
-            checkin: { status: this.selectedStatus, message, mood_emoji: document.querySelector(`[data-status="${this.selectedStatus}"] .status-emoji`).textContent },
-            streakDays: 1
-          });
-          this.showToast('演示模式：簽到成功！', 'success');
-        } finally {
-          btn.innerHTML = '確認簽到';
-          btn.disabled = false;
+        const message = document.getElementById('checkin-message').value;
+        const statusInfo = {
+          great: '😊',
+          okay: '🙂',
+          tired: '😔',
+          sick: '🤒',
+          busy: '😓',
+          urgent: '🆘'
+        };
+
+        const checkinData = {
+          status: this.selectedStatus,
+          message: message,
+          mood_emoji: statusInfo[this.selectedStatus],
+          created_at: new Date().toISOString()
+        };
+
+        // 保存簽到數據
+        const users = Storage.get('anansign_users', {});
+        if (!users[this.currentUser.email]) {
+          users[this.currentUser.email] = { checkins: [] };
         }
+        users[this.currentUser.email].checkins.push(checkinData);
+        Storage.set('anansign_users', users);
+
+        // 添加到全局動態
+        const allCheckins = Storage.get('anansign_allCheckins', []);
+        allCheckins.unshift({
+          userId: this.currentUser.email,
+          nickname: this.currentUser.nickname,
+          ...checkinData
+        });
+        Storage.set('anansign_allCheckins', allCheckins);
+
+        this.closeModal('checkin-modal');
+        this.showToast('🎉 簽到成功！已通知您的親友', 'success');
+        this.loadDashboardData();
+
+        btn.innerHTML = '確認簽到';
+        btn.disabled = false;
       },
 
       async showContacts() {
-        try {
-          const res = await fetch(`${API_URL}/contacts`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          const data = await res.json();
-          
-          const container = document.getElementById('contacts-list');
-          
-          if (data.contacts.length === 0) {
-            container.innerHTML = `
-              <div class="empty-state">
-                <div class="empty-icon">👥</div>
-                <p>還沒有親友</p>
-                <p style="font-size:12px;margin-top:8px;">添加親友後可以互相關注彼此的簽到狀態</p>
+        const users = Storage.get('anansign_users', {});
+        const userData = users[this.currentUser.email] || { contacts: [] };
+        const contacts = userData.contacts || [];
+
+        const container = document.getElementById('contacts-list');
+        
+        if (contacts.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">👥</div>
+              <p>還沒有親友</p>
+              <p style="font-size:12px;margin-top:8px;">添加親友後可以互相關注彼此的簽到狀態</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = contacts.map(c => `
+            <div class="contact-item">
+              <div class="avatar" style="background:var(--primary);font-size:14px;">${c.name.charAt(0)}</div>
+              <div class="contact-info">
+                <div class="contact-name">${c.name}</div>
+                <div class="contact-email">${c.email}</div>
               </div>
-            `;
-          } else {
-            container.innerHTML = data.contacts.map(c => `
-              <div class="contact-item">
-                <div class="avatar" style="background:var(--primary);font-size:14px;">${c.name.charAt(0)}</div>
-                <div class="contact-info">
-                  <div class="contact-name">${c.name}</div>
-                  <div class="contact-email">${c.email}</div>
-                  ${c.last_checkin ? `<div class="contact-status" style="font-size:11px;">最後簽到：${new Date(c.last_checkin).toLocaleDateString('zh-TW')}</div>` : ''}
-                </div>
-                <span class="feed-status">${c.status === 'accepted' ? '已確認' : '待確認'}</span>
-              </div>
-            `).join('');
-          }
-          
-          document.getElementById('contacts-modal').classList.add('active');
-        } catch (e) {
-          this.showToast('無法載入親友列表', 'error');
+              <span class="feed-status">已確認</span>
+            </div>
+          `).join('');
         }
+        
+        document.getElementById('contacts-modal').classList.add('active');
       },
 
       showAddContact() {
@@ -960,29 +1054,48 @@
 
       async addContact(e) {
         e.preventDefault();
-        const email = document.getElementById('contact-email').value;
-        const name = document.getElementById('contact-name').value;
         
-        try {
-          const res = await fetch(`${API_URL}/contacts`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.token}`
-            },
-            body: JSON.stringify({ email, name })
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 500));
+
+        const email = document.getElementById('contact-email').value;
+        const name = document.getElementById('contact-name').value || email.split('@')[0];
+
+        const users = Storage.get('anansign_users', {});
+        
+        if (!users[email]) {
+          // 創建一個演示親友
+          users[email] = {
+            nickname: name,
+            email: email,
+            password: 'demo123',
+            phone: '',
+            contacts: [],
+            checkins: [],
+            created_at: new Date().toISOString()
+          };
+          Storage.set('anansign_users', users);
+        }
+
+        // 添加到當前用戶的親友列表
+        if (!users[this.currentUser.email].contacts) {
+          users[this.currentUser.email].contacts = [];
+        }
+        
+        // 檢查是否已存在
+        const exists = users[this.currentUser.email].contacts.some(c => c.email === email);
+        if (!exists) {
+          users[this.currentUser.email].contacts.push({
+            email: email,
+            name: name,
+            status: 'accepted',
+            added_at: new Date().toISOString()
           });
-          const data = await res.json();
-          
-          if (data.success) {
-            this.closeModal('add-contact-modal');
-            this.showToast(data.message, 'success');
-          } else {
-            this.showToast(data.error, 'error');
-          }
-        } catch (e) {
+          Storage.set('anansign_users', users);
           this.closeModal('add-contact-modal');
-          this.showToast('演示模式：親友已添加', 'success');
+          this.showToast(`✅ 已添加 ${name} 為親友`, 'success');
+        } else {
+          this.showToast('此人已經是您的親友', 'warning');
         }
       },
 
@@ -991,45 +1104,36 @@
         container.innerHTML = '<div class="empty-state"><div class="loading" style="margin:0 auto;"></div><p style="margin-top:16px;">載入中...</p></div>';
         document.getElementById('feed-modal').classList.add('active');
 
-        try {
-          const res = await fetch(`${API_URL}/feed`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          const data = await res.json();
-          
-          if (data.feed.length === 0) {
-            container.innerHTML = `
-              <div class="empty-state">
-                <div class="empty-icon">🌍</div>
-                <p>社區還沒有動態</p>
-                <p style="font-size:12px;margin-top:8px;">成為第一個簽到的人吧！</p>
-              </div>
-            `;
-          } else {
-            container.innerHTML = data.feed.map(f => `
-              <div class="feed-item">
-                <div class="feed-header">
-                  <div class="feed-avatar">${f.user.nickname.charAt(0)}</div>
-                  <div>
-                    <div class="feed-name">${f.user.nickname}</div>
-                    <div class="feed-time">${this.formatTime(f.checkin_time)}</div>
-                  </div>
-                </div>
-                <div class="feed-content">
-                  <span class="feed-emoji">${f.mood_emoji}</span>
-                  <span class="feed-status">${this.getStatusText(f.status)}</span>
-                </div>
-                ${f.message ? `<p style="font-size:14px;margin-top:8px;color:#4a5568;">"${f.message}"</p>` : ''}
-              </div>
-            `).join('');
-          }
-        } catch (e) {
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 300));
+
+        const allCheckins = Storage.get('anansign_allCheckins', []);
+        
+        if (allCheckins.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
-              <div class="empty-icon">⚠️</div>
-              <p>無法載入社區動態</p>
+              <div class="empty-icon">🌍</div>
+              <p>社區還沒有動態</p>
+              <p style="font-size:12px;margin-top:8px;">成為第一個簽到的人吧！</p>
             </div>
           `;
+        } else {
+          container.innerHTML = allCheckins.map(f => `
+            <div class="feed-item">
+              <div class="feed-header">
+                <div class="feed-avatar">${f.nickname.charAt(0)}</div>
+                <div>
+                  <div class="feed-name">${f.nickname}</div>
+                  <div class="feed-time">${this.formatTime(f.created_at)}</div>
+                </div>
+              </div>
+              <div class="feed-content">
+                <span class="feed-emoji">${f.mood_emoji}</span>
+                <span class="feed-status">${this.getStatusText(f.status)}</span>
+              </div>
+              ${f.message ? `<p style="font-size:14px;margin-top:8px;color:#4a5568;">"${f.message}"</p>` : ''}
+            </div>
+          `).join('');
         }
       },
 
@@ -1038,40 +1142,36 @@
         container.innerHTML = '<div class="empty-state"><div class="loading" style="margin:0 auto;"></div><p style="margin-top:16px;">載入中...</p></div>';
         document.getElementById('history-modal').classList.add('active');
 
-        try {
-          const res = await fetch(`${API_URL}/checkins/history?limit=30`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          const data = await res.json();
-          
-          if (data.checkins.length === 0) {
-            container.innerHTML = `
-              <div class="empty-state">
-                <div class="empty-icon">📅</div>
-                <p>還沒有簽到記錄</p>
-              </div>
-            `;
-          } else {
-            container.innerHTML = data.checkins.map(c => `
-              <div class="feed-item">
-                <div class="feed-header">
-                  <span class="feed-emoji">${c.mood_emoji}</span>
-                  <div>
-                    <div class="feed-name">${this.getStatusText(c.status)}</div>
-                    <div class="feed-time">${new Date(c.created_at).toLocaleString('zh-TW')}</div>
-                  </div>
-                </div>
-                ${c.message ? `<p style="font-size:14px;margin-top:4px;color:#4a5568;">"${c.message}"</p>` : ''}
-              </div>
-            `).join('');
-          }
-        } catch (e) {
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 300));
+
+        const users = Storage.get('anansign_users', {});
+        const userData = users[this.currentUser.email] || { checkins: [] };
+        const checkins = userData.checkins || [];
+        
+        // 按時間排序
+        const sorted = [...checkins].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        if (sorted.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
-              <div class="empty-icon">⚠️</div>
-              <p>無法載入歷史記錄</p>
+              <div class="empty-icon">📅</div>
+              <p>還沒有簽到記錄</p>
             </div>
           `;
+        } else {
+          container.innerHTML = sorted.map(c => `
+            <div class="feed-item">
+              <div class="feed-header">
+                <span class="feed-emoji">${c.mood_emoji}</span>
+                <div>
+                  <div class="feed-name">${this.getStatusText(c.status)}</div>
+                  <div class="feed-time">${new Date(c.created_at).toLocaleString('zh-TW')}</div>
+                </div>
+              </div>
+              ${c.message ? `<p style="font-size:14px;margin-top:4px;color:#4a5568;">"${c.message}"</p>` : ''}
+            </div>
+          `).join('');
         }
       },
 
@@ -1085,51 +1185,58 @@
       async updateProfile(e) {
         e.preventDefault();
         
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 300));
+
         const nickname = document.getElementById('profile-nickname').value;
         const phone = document.getElementById('profile-phone').value;
 
-        try {
-          const res = await fetch(`${API_URL}/user/profile`, {
-            method: 'PUT',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.token}`
-            },
-            body: JSON.stringify({ nickname, phone })
-          });
-          const data = await res.json();
-          
-          if (data.success) {
-            this.currentUser.nickname = nickname;
-            this.currentUser.phone = phone;
-            document.getElementById('user-name').textContent = nickname;
-            document.getElementById('user-avatar').textContent = nickname.charAt(0);
-            this.closeModal('profile-modal');
-            this.showToast('資料已更新', 'success');
-          } else {
-            this.showToast(data.error, 'error');
-          }
-        } catch (e) {
-          this.showToast('無法更新資料', 'error');
+        // 更新當前用戶
+        this.currentUser.nickname = nickname;
+        this.currentUser.phone = phone;
+        Storage.set('anansign_currentUser', this.currentUser);
+
+        // 更新所有用戶數據中的暱稱
+        const users = Storage.get('anansign_users', {});
+        if (users[this.currentUser.email]) {
+          users[this.currentUser.email].nickname = nickname;
+          users[this.currentUser.email].phone = phone;
+          Storage.set('anansign_users', users);
         }
+
+        // 更新歷史記錄中的暱稱
+        const allCheckins = Storage.get('anansign_allCheckins', []);
+        allCheckins.forEach(c => {
+          if (c.userId === this.currentUser.email) {
+            c.nickname = nickname;
+          }
+        });
+        Storage.set('anansign_allCheckins', allCheckins);
+
+        document.getElementById('user-name').textContent = nickname;
+        document.getElementById('user-avatar').textContent = nickname.charAt(0);
+        
+        this.closeModal('profile-modal');
+        this.showToast('✅ 資料已更新', 'success');
       },
 
-      async loadNotifications() {
-        try {
-          const res = await fetch(`${API_URL}/notifications?unread=true`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          const data = await res.json();
-          
-          const badge = document.getElementById('notif-badge');
-          if (data.notifications.length > 0) {
-            badge.textContent = data.notifications.length > 99 ? '99+' : data.notifications.length;
-            badge.style.display = 'flex';
-          } else {
-            badge.style.display = 'none';
-          }
-        } catch (e) {
-          // 忽略通知載入錯誤
+      loadNotifications() {
+        // 演示版本：模擬有一些通知
+        const demoNotifs = Storage.get(`anansign_notifs_${this.currentUser?.email}`, []);
+        const badge = document.getElementById('notif-badge');
+        
+        if (demoNotifs.length > 0) {
+          badge.textContent = demoNotifs.length > 99 ? '99+' : demoNotifs.length;
+          badge.style.display = 'flex';
+        } else {
+          // 添加一些演示通知
+          const initialNotifs = [
+            { id: 1, type: 'checkin', title: '歡迎加入安安簽到', message: '每天記得來簽到報平安喔！', created_at: new Date().toISOString(), read: false },
+            { id: 2, type: 'system', title: '💚 演示模式', message: '這是演示版本，資料存在瀏覽器中', created_at: new Date(Date.now() - 3600000).toISOString(), read: false }
+          ];
+          Storage.set(`anansign_notifs_${this.currentUser?.email}`, initialNotifs);
+          badge.textContent = '2';
+          badge.style.display = 'flex';
         }
       },
 
@@ -1138,74 +1245,65 @@
         container.innerHTML = '<div class="empty-state"><div class="loading" style="margin:0 auto;"></div><p style="margin-top:16px;">載入中...</p></div>';
         document.getElementById('notifications-modal').classList.add('active');
 
-        try {
-          const res = await fetch(`${API_URL}/notifications`, {
-            headers: { 'Authorization': `Bearer ${this.token}` }
-          });
-          const data = await res.json();
-          
-          // 標記為已讀
-          data.notifications.forEach(n => {
-            fetch(`${API_URL}/notifications/${n.id}/read`, {
-              method: 'PUT',
-              headers: { 'Authorization': `Bearer ${this.token}` }
-            });
-          });
-          document.getElementById('notif-badge').style.display = 'none';
-          
-          if (data.notifications.length === 0) {
-            container.innerHTML = `
-              <div class="empty-state">
-                <div class="empty-icon">🔔</div>
-                <p>沒有通知</p>
-              </div>
-            `;
-          } else {
-            container.innerHTML = data.notifications.map(n => `
-              <div class="feed-item" style="background:${n.read ? 'transparent' : '#f7fafc'};border-radius:8px;margin-bottom:8px;">
-                <div class="feed-header">
-                  <span style="font-size:20px;">${this.getNotifIcon(n.type)}</span>
-                  <div style="flex:1;margin-left:8px;">
-                    <div class="feed-name">${n.title}</div>
-                    <div class="feed-time">${this.formatTime(n.created_at)}</div>
-                  </div>
-                </div>
-                ${n.message ? `<p style="font-size:14px;color:#4a5568;margin-top:4px;">${n.message}</p>` : ''}
-              </div>
-            `).join('');
-          }
-        } catch (e) {
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 300));
+
+        const notifications = Storage.get(`anansign_notifs_${this.currentUser.email}`, []);
+        
+        // 標記為已讀
+        notifications.forEach(n => n.read = true);
+        Storage.set(`anansign_notifs_${this.currentUser.email}`, notifications);
+        document.getElementById('notif-badge').style.display = 'none';
+        
+        if (notifications.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
-              <div class="empty-icon">⚠️</div>
-              <p>無法載入通知</p>
+              <div class="empty-icon">🔔</div>
+              <p>沒有通知</p>
             </div>
           `;
+        } else {
+          container.innerHTML = notifications.map(n => `
+            <div class="feed-item" style="background:${n.read ? 'transparent' : '#f7fafc'};border-radius:8px;margin-bottom:8px;">
+              <div class="feed-header">
+                <span style="font-size:20px;">${this.getNotifIcon(n.type)}</span>
+                <div style="flex:1;margin-left:8px;">
+                  <div class="feed-name">${n.title}</div>
+                  <div class="feed-time">${this.formatTime(n.created_at)}</div>
+                </div>
+              </div>
+              ${n.message ? `<p style="font-size:14px;color:#4a5568;margin-top:4px;">${n.message}</p>` : ''}
+            </div>
+          `).join('');
         }
       },
 
       async triggerEmergency() {
         if (!confirm('確認觸發緊急狀態？您的所有親友都會立即收到通知。')) return;
         
-        try {
-          const res = await fetch(`${API_URL}/emergency/trigger`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.token}`
-            },
-            body: JSON.stringify({ message: '需要幫助' })
-          });
-          const data = await res.json();
-          
-          if (data.success) {
-            this.showToast('🆘 已向所有親友發送緊急通知！', 'success');
-          } else {
-            this.showToast(data.error || '發送失敗', 'error');
-          }
-        } catch (e) {
-          this.showToast('🆘 演示模式：緊急通知已發送', 'success');
-        }
+        // 模擬網路延遲
+        await new Promise(r => setTimeout(r, 500));
+
+        // 創建緊急通知
+        const emergencyNotif = {
+          id: Date.now(),
+          type: 'emergency',
+          title: '🆘 緊急通知',
+          message: `${this.currentUser.nickname} 需要幫助！`,
+          created_at: new Date().toISOString(),
+          read: false
+        };
+
+        // 存儲緊急通知
+        const allNotifs = Storage.get('anansign_emergency_notifs', []);
+        allNotifs.unshift({
+          ...emergencyNotif,
+          fromUser: this.currentUser.email,
+          fromNickname: this.currentUser.nickname
+        });
+        Storage.set('anansign_emergency_notifs', allNotifs);
+
+        this.showToast('🆘 已向所有親友發送緊急通知！', 'success');
       },
 
       closeModal(modalId) {
